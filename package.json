@@ -1,9 +1,8 @@
 {
   "name": "js-dist",
   "version": "0.0.1",
-  "description": "Build repo for cliquesAdsAsync.js",
-  "main": "index.js",
-  "scripts": {},
+  "description": "Build repo for cloader.js",
+  "main": "getClientLoader.js",
   "dependencies": {
     "cliques-node-utils": "git+https://2c663350df2f1cdd63dd766c9f0a009489f1a0e9:x-oauth-basic@github.com/cliquesads/cliques-node-utils.git#0.1.4",
     "config": "^1.15.0",

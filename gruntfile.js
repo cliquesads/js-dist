@@ -22,12 +22,12 @@ module.exports = function(grunt) {
                     'dist/cloader-dev.min.js': 'dist/cloader-dev.js'
                 }
             },
-            test: {
+            "local-test": {
                 options: {
                     mangle: false
                 },
                 files: {
-                    'dist/cloader-test.min.js': 'dist/cloader-test.js'
+                    'dist/cloader-local-test.min.js': 'dist/cloader-local-test.js'
                 }
             }
 		},
@@ -36,8 +36,11 @@ module.exports = function(grunt) {
             dev: {
                 NODE_ENV: 'dev'
             },
-			test: {
-				NODE_ENV: 'test'
+            production: {
+                NODE_ENV: 'production'
+            },
+			"local-test": {
+				NODE_ENV: 'local-test'
 			}
 		}
 	});
@@ -86,5 +89,8 @@ module.exports = function(grunt) {
         grunt.log.ok(fName + ' has been created.');
     });
 
-	grunt.registerTask('default', ['loadConfig', 'buildLoader', 'uglify']);
+    //main multi tasks
+	grunt.registerTask('default', ['env:local-test','loadConfig', 'buildLoader', 'uglify:local-test']);
+    grunt.registerTask('build_production', ['env:production','loadConfig', 'buildLoader', 'uglify:production']);
+    grunt.registerTask('build_dev', ['env:dev','loadConfig', 'buildLoader', 'uglify:dev']);
 };

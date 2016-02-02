@@ -1,0 +1,32 @@
+{
+  "name": "js-dist",
+  "version": "0.0.1",
+  "description": "Build repo for cliquesAdsAsync.js",
+  "main": "index.js",
+  "scripts": {},
+  "dependencies": {
+    "cliques-node-utils": "git+https://2c663350df2f1cdd63dd766c9f0a009489f1a0e9:x-oauth-basic@github.com/cliquesads/cliques-node-utils.git#0.1.4",
+    "config": "^1.15.0",
+    "grunt-cli": "~0.1.13"
+  },
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-browserify": "^4.0.1",
+    "grunt-contrib-concat": "^0.5.1",
+    "grunt-contrib-jshint": "~0.10.0",
+    "grunt-contrib-uglify": "~0.6.0",
+    "grunt-env": "~0.4.1",
+    "grunt-node-inspector": "~0.1.3",
+    "load-grunt-tasks": "^1.0.0",
+    "should": "~4.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cliquesads/js-dist.git"
+  },
+  "author": "Ben Liang",
+  "bugs": {
+    "url": "https://github.com/cliquesads/js-dist/issues"
+  },
+  "homepage": "https://github.com/cliquesads/js-dist#readme"
+}

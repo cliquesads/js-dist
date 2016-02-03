@@ -39,8 +39,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                         copyAttributes(thisNode, new_s);
                         parent.insertBefore(new_s, nextSibling);
                     } else {
-                        // #sorrynotsorry
-                        eval(thisNode.innerText);
+                        JSON.parse(thisNode.innerText);
                     }
                 }
                 if (thisNode.children.length > 0){

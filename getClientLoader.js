@@ -39,7 +39,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                         copyAttributes(thisNode, new_s);
                         parent.insertBefore(new_s, nextSibling);
                     } else {
-                        JSON.parse(thisNode.innerText);
+                        (new Function(thisNode.innerText))();
                     }
                 }
                 if (thisNode.children.length > 0){

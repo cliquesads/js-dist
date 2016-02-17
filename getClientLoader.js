@@ -54,7 +54,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 _args.secure = options.secure;
                 var u = (_args.secure ? 'https://' + _args.exchange_secure_hostname : 'http://' + _args.exchange_hostname);
                 u += _args.pub_path;
-                u += '?' + 'pid=' + _args.pid;
+                u += '?' + 'pid=' + _args.pid + '&type=javascript';
                 _args.url = encodeURI(u);
             },
             main: function (){

@@ -54,7 +54,7 @@ module.exports = function(grunt) {
 	// A Task for loading the configuration object
 	grunt.task.registerTask('loadConfig', 'Task that loads the config into a grunt option.', function(){
 		var config = require('config'),
-            pubPath = require('cliques_node_utils').urls.PUB_PATH,
+            pubPath = require('@cliques/cliques-node-utils').urls.PUB_PATH,
             exchangeHostname = config.get('Exchange.http.external.hostname'),
             exchangeSecureHostname = config.get('Exchange.https.external.hostname');
 

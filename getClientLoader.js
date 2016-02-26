@@ -14,12 +14,6 @@ var util = require('util');
  */
 module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
     var f = function(){
-        var _args = {
-            exchange_hostname: '%s',
-            exchange_secure_hostname: '%s',
-            pub_path: '%s'
-        };
-
         var copyAttributes = function(oldNode, newNode){
             for (var i=0; i < oldNode.attributes.length; i++){
                 var attr = oldNode.attributes[i];
@@ -48,26 +42,35 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             }
         };
 
+        var _Loader = function(options){
+            this.exchange_hostname = '%s';
+            this.exchange_secure_hostname = '%s';
+            this.pub_path = '%s';
+            this.pid = options.pid;
+            this.secure = options.secure;
+            var u = (this.secure ? 'https://' + this.exchange_secure_hostname : 'http://' + this.exchange_hostname);
+            u += this.pub_path;
+            u += '?' + 'pid=' + this.pid + '&type=javascript';
+            this.url = encodeURI(u);
+        };
+
+        _Loader.prototype.main = function (){
+            var self = this;
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                    var el = document.getElementById('cloader-' + self.pid);
+                    el.innerHTML = xmlHttp.responseText;
+                    replaceScripts(el);
+                }
+            };
+            xmlHttp.open("GET", self.url, true); // true for asynchronous
+            xmlHttp.send(null);
+        };
+
         return {
             init: function (options) {
-                _args.pid = options.pid;
-                _args.secure = options.secure;
-                var u = (_args.secure ? 'https://' + _args.exchange_secure_hostname : 'http://' + _args.exchange_hostname);
-                u += _args.pub_path;
-                u += '?' + 'pid=' + _args.pid + '&type=javascript';
-                _args.url = encodeURI(u);
-            },
-            main: function (){
-                var xmlHttp = new XMLHttpRequest();
-                xmlHttp.onreadystatechange = function() {
-                    if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-                        var el = document.getElementById('cloader-' + _args.pid);
-                        el.innerHTML = xmlHttp.responseText;
-                        replaceScripts(el);
-                    }
-                };
-                xmlHttp.open("GET", _args.url, true); // true for asynchronous
-                xmlHttp.send(null);
+                return new _Loader(options);
             }
         };
     };

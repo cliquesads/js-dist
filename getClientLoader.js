@@ -58,7 +58,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             this.type = options.type || 'display';
             var u = (this.secure ? 'https://' + this.exchange_secure_hostname : 'http://' + this.exchange_hostname);
             u += this.pub_path;
-            u += '?' + 'pid=' + this.pid + '&type=javascript';
+            u += '?' + 'pid=' + this.pid + '&type=javascript&form-factor=' + this.formFactor;
             this.url = encodeURI(u);
         };
 
@@ -76,13 +76,16 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             xmlHttp.send(null);
         };
 
-        _Loader.prototype._onNativePubLoad = function(impUrl){
+        _Loader.prototype._onNativePubLoad = function(placementSpecs){
             var self = this;
-            impUrl += '&form-factor=' + self.formFactor;
+            var impUrl = placementSpecs.adm + '&form-factor=' + self.formFactor;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function() {
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
                     // populate template variables here & append complete template to <ins> tag
+                    // var creativeSpecs = JSON.parse(xmlHttp.responseText);
+                    var el = document.getElementById('cloader-' + self.pid);
+                    el.innerHTML = JSON.stringify(placementSpecs) + " " + xmlHttp.responseText;
                 }
             };
             xmlHttp.open("GET", impUrl, true); // true for asynchronous
@@ -94,8 +97,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function() {
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-                    var adServerUrl = xmlHttp.responseText;
-                    self._onNativePubLoad(adServerUrl);
+                    var placementSpecs = JSON.parse(xmlHttp.responseText);
+                    self._onNativePubLoad(placementSpecs);
                 }
             };
             xmlHttp.open("GET", self.url, true); // true for asynchronous

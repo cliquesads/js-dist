@@ -21,6 +21,34 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             }
         };
 
+        var replaceTemplateVar = function(template, varName, value){
+            var re = new RegExp('{{(\\s|)' + varName + '(\\s|)}}','g');
+            return template.replace(re, value);
+        };
+
+        var TEMPLATE_VARS = [
+            'copyLong',
+            'copyShort',
+            'secureRawImageUrl',
+            'rawImageUrl',
+            'rawImageH',
+            'rawImageW',
+            'secureLogoUrl',
+            'logoUrl',
+            'logoH',
+            'logoW',
+            'click_url',
+            'impTracker',
+            'advertiserName'
+        ];
+
+        var populateTemplate = function(template, creativeSpecs){
+            TEMPLATE_VARS.forEach(function(templateVar){
+                template = replaceTemplateVar(template, templateVar, creativeSpecs[templateVar]);
+            });
+            return template;
+        };
+
         var replaceScripts = function(parent){
             for (var j=0; j < parent.children.length; j++){
                 var thisNode = parent.children[j];
@@ -85,7 +113,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     // populate template variables here & append complete template to <ins> tag
                     // var creativeSpecs = JSON.parse(xmlHttp.responseText);
                     var el = document.getElementById('cloader-' + self.pid);
-                    el.innerHTML = JSON.stringify(placementSpecs) + " " + xmlHttp.responseText;
+                    var creativeSpecs = JSON.parse(xmlHttp.responseText);
+                    el.innerHTML = populateTemplate(placementSpecs.template, creativeSpecs);
                 }
             };
             xmlHttp.open("GET", impUrl, true); // true for asynchronous
@@ -98,7 +127,12 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             xmlHttp.onreadystatechange = function() {
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
                     var placementSpecs = JSON.parse(xmlHttp.responseText);
-                    self._onNativePubLoad(placementSpecs);
+                    if (placementSpecs.test){
+                        var el = document.getElementById('cloader-' + self.pid);
+                        el.innerHTML = populateTemplate(placementSpecs.template, placementSpecs);
+                    } else {
+                        self._onNativePubLoad(placementSpecs);
+                    }
                 }
             };
             xmlHttp.open("GET", self.url, true); // true for asynchronous

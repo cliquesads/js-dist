@@ -155,7 +155,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
-                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && xmlHttp.responseText) {
                     var placementSpecs = JSON.parse(xmlHttp.responseText);
                     if (placementSpecs.test){
                         var el = document.getElementById('cloader-' + self.pid);

@@ -53,12 +53,15 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var _render = function(template, context){
                 for (var k in context){
                     if (context.hasOwnProperty(k)){
-                        if (k === 'rawImageUrl' || k === 'secureRawImageUrl'){
+                        if (k === 'imageUrl' || k === 'secureImageUrl'){
                             template = addAttributeToTemplateVarElement(template, k, 'data-cliquesnative');
                         } else {
                             template = replaceTemplateVar(template, k, context[k]);
                         }
                     }
+                }
+                if (context.impTracker){
+                    template = '<img src="' + context.impTracker + '" height="1" width="1"/>';
                 }
                 return template;
             };

@@ -68,7 +68,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     }
                 }
                 if (creativeContext.impTracker){
-                    template = '<img src="' + creativeContext.impTracker + '" height="1" width="1"/>';
+                    template = '<img src="' + creativeContext.impTracker + '" height="1" width="1"/>' + template;
                 }
                 return template;
             };

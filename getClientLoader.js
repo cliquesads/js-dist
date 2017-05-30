@@ -49,19 +49,26 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             return c;
         };
 
-        var renderTemplate = function(element, template, context){
-            var _render = function(template, context){
-                for (var k in context){
-                    if (context.hasOwnProperty(k)){
+        var renderTemplate = function(element, template, creativeContext, placementContext){
+            var trunctedSuffix = '...';
+            var _render = function(template, creativeContext, placementContext){
+                for (var k in creativeContext){
+                    if (creativeContext.hasOwnProperty(k)){
                         if (k === 'imageUrl' || k === 'secureImageUrl'){
                             template = addAttributeToTemplateVarElement(template, k, 'data-cliquesnative');
+                        } else if (k === 'headline'){
+                            var headline = placementContext.headlineMaxLength ? creativeContext[k].slice(0, placementContext.headlineMaxLength) + trunctedSuffix : creativeContext[k];
+                            template = replaceTemplateVar(template, k, headline);
+                        } else if (k === 'description'){
+                            var description = placementContext.descriptionMaxLength ? creativeContext[k].slice(0, placementContext.descriptionMaxLength) + trunctedSuffix : creativeContext[k];
+                            template = replaceTemplateVar(template, k, description);
                         } else {
-                            template = replaceTemplateVar(template, k, context[k]);
+                            template = replaceTemplateVar(template, k, creativeContext[k]);
                         }
                     }
                 }
-                if (context.impTracker){
-                    template = '<img src="' + context.impTracker + '" height="1" width="1"/>';
+                if (creativeContext.impTracker){
+                    template = '<img src="' + creativeContext.impTracker + '" height="1" width="1"/>';
                 }
                 return template;
             };
@@ -74,10 +81,10 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     var h = image.clientHeight;
                     var w = image.clientWidth;
                     var transform = 'c_thumb,g_auto,h_' + h + ',w_' + w;
-                    image.src = context.secureRawImageUrl.replace(/(image\/upload\/)(.*$)/g,"$1" + transform + "/$2");
+                    image.src = creativeContext.secureImageUrl.replace(/(image\/upload\/)(.*$)/g,"$1" + transform + "/$2");
                 });
             };
-            template = _render(template, context);
+            template = _render(template, creativeContext, placementContext);
             element.innerHTML = template;
             _postRender(element);
         };
@@ -147,7 +154,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     var el = document.getElementById('cloader-' + self.pid);
                     var creativeSpecs = JSON.parse(xmlHttp.responseText);
                     creativeSpecs.brandDisclosure = placementSpecs.brandDisclosurePrefix + " " + creativeSpecs.advertiserName;
-                    renderTemplate(el, placementSpecs.template, creativeSpecs);
+                    renderTemplate(el, placementSpecs.template, creativeSpecs, placementSpecs);
                 }
             };
             xmlHttp.open("GET", impUrl, true); // true for asynchronous
@@ -163,7 +170,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     if (placementSpecs.test){
                         var el = document.getElementById('cloader-' + self.pid);
                         placementSpecs.brandDisclosure = placementSpecs.brandDisclosurePrefix + " " + placementSpecs.advertiserName;
-                        renderTemplate(el, placementSpecs.template, placementSpecs);
+                        renderTemplate(el, placementSpecs.template, placementSpecs, placementSpecs);
                     } else {
                         self._onNativePubLoad(placementSpecs);
                     }

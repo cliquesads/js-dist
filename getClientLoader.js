@@ -53,19 +53,28 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
 
         var renderTemplate = function(creativeContext, placementContext){
             var template = placementContext.template;
+            creativeContext.brandDisclosure = true;
             var trunctedSuffix = '...';
             for (var k in creativeContext){
                 if (creativeContext.hasOwnProperty(k)){
-                    if (k === 'imageUrl' || k === 'secureImageUrl'){
+                    var value;
+                    switch (k){
+                        case 'headline':
+                            value = placementContext.headlineMaxLength ? creativeContext[k].slice(0, placementContext.headlineMaxLength) + trunctedSuffix : creativeContext[k];
+                            break;
+                        case 'description':
+                            value = placementContext.descriptionMaxLength ? creativeContext[k].slice(0, placementContext.descriptionMaxLength) + trunctedSuffix : creativeContext[k];
+                            break;
+                        case 'brandDisclosure':
+                            value = placementContext.brandDisclosurePrefix + " " + creativeContext.advertiserName;
+                            break;
+                        default:
+                            value = creativeContext[k];
+                    }
+                    if (k === 'imageUrl' || k === 'secureImageUrl') {
                         template = addAttributeToTemplateVarElement(template, k, IMAGE_ATTR);
-                    } else if (k === 'headline'){
-                        var headline = placementContext.headlineMaxLength ? creativeContext[k].slice(0, placementContext.headlineMaxLength) + trunctedSuffix : creativeContext[k];
-                        template = replaceTemplateVar(template, k, headline);
-                    } else if (k === 'description'){
-                        var description = placementContext.descriptionMaxLength ? creativeContext[k].slice(0, placementContext.descriptionMaxLength) + trunctedSuffix : creativeContext[k];
-                        template = replaceTemplateVar(template, k, description);
                     } else {
-                        template = replaceTemplateVar(template, k, creativeContext[k]);
+                        template = replaceTemplateVar(template, k, value);
                     }
                 }
             }
@@ -107,6 +116,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 }
                 if (thisNode.children.length > 0){
                     replaceScripts(thisNode);
+                    
                 }
             }
         };
@@ -125,6 +135,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             this.secure = options.secure;
             this.formFactor = isMobile() ? 'mobile' : 'desktop';
             this.type = options.type || 'display';
+            this.native = {};
+            this.display = {};
             this.targetId = options.targetId;
             this.targetChildIndex = options.targetChildIndex;
             var u = (this.secure ? 'https://' + this.exchange_secure_hostname : 'http://' + this.exchange_hostname);
@@ -133,48 +145,47 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             this.url = encodeURI(u);
         };
 
+        _Loader.prototype._doRender = function(){
+            var el;
+            var self = this;
+            var markup = (self.type === 'native') ? renderTemplate(self.native.creativeSpecs, self.native.placementSpecs) : self.display.markup;
+            if (this.targetId && this.targetChildIndex){
+                var parent = document.getElementById(self.targetId);
+                var targetNode = parent.children[self.targetChildIndex];
+                var newNode = document.createElement('ins');
+                el = parent.insertBefore(newNode, targetNode);
+            } else {
+                el = document.getElementById('cloader-' + self.pid);
+            }
+            el.innerHTML = markup;
+            if (self.type === 'native') {
+                templatePostRender(el, self.native.creativeSpecs);
+            } else {
+                replaceScripts(el);
+            }
+        };
+
         _Loader.prototype._loadDisplay = function(){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
-                    var el = document.getElementById('cloader-' + self.pid);
-                    el.innerHTML = xmlHttp.responseText;
-                    replaceScripts(el);
+                    self.display.markup = xmlHttp.responseText;
+                    self._doRender();
                 }
             };
             xmlHttp.open("GET", self.url, true); // true for asynchronous
             xmlHttp.send(null);
         };
 
-        _Loader.prototype._doNativeRender = function(creativeSpecs, placementSpecs){
-            var el;
+        _Loader.prototype._onNativePubLoad = function(){
             var self = this;
-            var template = renderTemplate(creativeSpecs, placementSpecs);
-            if (this.targetId && this.targetChildIndex){
-                var parent = document.getElementById(this.targetId);
-                var targetNode = parent.children[this.targetChildIndex];
-                var newNode = document.createElement('ins');
-                newNode.innerHTML = template;
-                newNode = parent.insertBefore(newNode, targetNode);
-                templatePostRender(newNode, creativeSpecs);
-            } else {
-                el = document.getElementById('cloader-' + self.pid);
-                el.innerHTML = template;
-                templatePostRender(el, creativeSpecs);
-            }
-            return el;
-        };
-
-        _Loader.prototype._onNativePubLoad = function(placementSpecs){
-            var self = this;
-            var impUrl = placementSpecs.adm + '&form-factor=' + self.formFactor;
+            var impUrl = self.native.placementSpecs.adm + '&form-factor=' + self.formFactor;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function() {
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-                    var creativeSpecs = JSON.parse(xmlHttp.responseText);
-                    creativeSpecs.brandDisclosure = placementSpecs.brandDisclosurePrefix + " " + creativeSpecs.advertiserName;
-                    self._doNativeRender(creativeSpecs, placementSpecs);
+                    self.native.creativeSpecs = JSON.parse(xmlHttp.responseText);
+                    self._doRender();
                 }
             };
             xmlHttp.open("GET", impUrl, true); // true for asynchronous
@@ -186,12 +197,12 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && xmlHttp.responseText) {
-                    var placementSpecs = JSON.parse(xmlHttp.responseText);
-                    if (placementSpecs.test){
-                        placementSpecs.brandDisclosure = placementSpecs.brandDisclosurePrefix + " " + placementSpecs.advertiserName;
-                        self._doNativeRender(placementSpecs, placementSpecs);
+                    self.native.placementSpecs = JSON.parse(xmlHttp.responseText);
+                    if (self.native.placementSpecs.test){
+                        self.native.creativeSpecs = self.native.placementSpecs; // just for testing
+                        self._doRender();
                     } else {
-                        self._onNativePubLoad(placementSpecs);
+                        self._onNativePubLoad();
                     }
                 }
             };

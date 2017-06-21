@@ -56,58 +56,6 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             return canonicalUrl.replace(/(image\/upload\/)(.*$)/g,"$1" + transform + "/$2");
         };
 
-        /**
-         * Binds template variables in creativeContext to native ad template stored in `placementContext`.
-         *
-         * Populated all variables according to publisher restrictions (where applicable, i.e. `headline` &
-         * `description`) EXCEPT for `secureImageUrl` & `imageUrl`, which get an attribute added to their
-         * element as a flag for the post-render step to come back & attach src attributes to.
-         *
-         * @param creativeContext
-         * @param placementContext
-         * @returns {*}
-         */
-        var renderTemplate = function(creativeContext, placementContext){
-            var template = placementContext.template;
-            creativeContext.brandDisclosure = true;
-            var trunctedSuffix = '...';
-            for (var k in creativeContext){
-                if (creativeContext.hasOwnProperty(k)){
-                    var value;
-                    // handle special cases that need to get truncated / modified according to publisher specs
-                    switch (k){
-                        case 'headline':
-                            value = placementContext.headlineMaxLength ?
-                            creativeContext[k].slice(0, placementContext.headlineMaxLength) + trunctedSuffix : creativeContext[k];
-                            break;
-                        case 'description':
-                            value = placementContext.descriptionMaxLength ?
-                            creativeContext[k].slice(0, placementContext.descriptionMaxLength) + trunctedSuffix : creativeContext[k];
-                            break;
-                        case 'brandDisclosure':
-                            value = placementContext.brandDisclosurePrefix + " " + creativeContext.advertiserName;
-                            break;
-                        default:
-                            value = creativeContext[k];
-                    }
-                    if (k === 'imageUrl' || k === 'secureImageUrl') {
-                        template = addAttributeToTemplateVarElement(template, k, IMAGE_ATTR);
-                    } else {
-                        template = replaceTemplateVar(template, k, value);
-                    }
-                }
-            }
-            // add separate <img> element for impTracker to beginning of the template
-            if (creativeContext.impTracker){
-                template = '<img src="' + creativeContext.impTracker + '" height="1" width="1" border="0" alt="Advertisement"/>' + template;
-            }
-            // advertisement disclosure is stored in placementContext, not creativeContext
-            if (placementContext.advertisementDisclosure){
-                template = replaceTemplateVar(template, 'advertisementDisclosure', placementContext.advertisementDisclosure);
-            }
-            return template;
-        };
-
         var templatePostRender = function(targetElement, creativeContext, dims){
             var image = findChildWithAttribute(targetElement, 'data-cliquesnative');
             if (!dims) {
@@ -264,6 +212,92 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
         };
 
         /**
+         * Binds template variables in creativeContext to native ad template stored in `placementContext`.
+         *
+         * Populated all variables according to publisher restrictions (where applicable, i.e. `headline` &
+         * `description`) EXCEPT for `secureImageUrl` & `imageUrl`, which get an attribute added to their
+         * element as a flag for the post-render step to come back & attach src attributes to.
+         *
+         * @param template
+         * @param context
+         * @returns {*}
+         */
+        _Loader.prototype.renderNativeTemplate = function(template, context){
+            var self = this;
+            // brandDisclosure is a derived property (from brandDisclosurePrefix and advertiserName)
+            // so set it to 'true' so it can get handled in the switch statement below
+            context.brandDisclosure = true;
+            var trunctedSuffix = '...';
+            for (var k in context){
+                if (context.hasOwnProperty(k)){
+                    var value;
+                    // handle special cases that need to get truncated / modified according to publisher specs
+                    switch (k){
+                        case 'headline':
+                            value = context.headlineMaxLength ?
+                            context[k].slice(0, context.headlineMaxLength) + trunctedSuffix : context[k];
+                            break;
+                        case 'description':
+                            value = context.descriptionMaxLength ?
+                            context[k].slice(0, context.descriptionMaxLength) + trunctedSuffix : context[k];
+                            break;
+                        case 'brandDisclosure':
+                            value = context.brandDisclosurePrefix + " " + context.advertiserName;
+                            break;
+                        default:
+                            value = context[k];
+                    }
+                    if (k === 'imageUrl' || k === 'secureImageUrl') {
+                        if (self.lazy){
+                            // if "lazy", then dimensions are assumed to be passed in already
+                            // under context.nativeDimensions, so go ahead and get the transformURL
+                            var newUrl = getTransformUrlFromCanonical(context[k],
+                                context.nativeDimensions.width,
+                                context.nativeDimensions.height);
+                            template = replaceTemplateVar(template,k,newUrl);
+                        } else {
+                            // otherwise, just add an attribute to the element so that the post-render step
+                            // can size it and inject the transform URL.
+                            template = addAttributeToTemplateVarElement(template, k, IMAGE_ATTR);
+                        }
+                    } else {
+                        template = replaceTemplateVar(template, k, value);
+                    }
+                }
+            }
+            // add separate <img> element for impTracker to beginning of the template
+            if (context.impTracker){
+                template = '<img src="' + context.impTracker + '" height="1" width="1" border="0" alt="Advertisement"/>' + template;
+            }
+            // advertisement disclosure is stored in placementContext, not creativeContext
+            if (context.advertisementDisclosure){
+                template = replaceTemplateVar(template, 'advertisementDisclosure', context.advertisementDisclosure);
+            }
+            return template;
+        };
+
+        /**
+         * Creates unified context object to pass to template
+         * @private
+         */
+        _Loader.prototype._getNativeContext = function(){
+            var self = this;
+            var context = self.native.creativeSpecs;
+            // enumerate all of the properties of placement specs
+            // and add them to context
+            var placementParams = [
+                'brandDisclosurePrefix',
+                'headlineMaxLength',
+                'descriptionMaxLength',
+                'advertisementDisclosure'
+            ];
+            placementParams.forEach(function(param){
+                context[param] = self.native.placementSpecs[param];
+            });
+            return context;
+        };
+
+        /**
          *
          * @param lazyCallback only required applicable if this.lazy === true && this.type === 'native'
          * @returns {*}
@@ -271,11 +305,14 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          */
         _Loader.prototype._doNativeRender = function(lazyCallback){
             var self = this;
-            var markup = renderTemplate(self.native.creativeSpecs, self.native.placementSpecs);
+            var context = self._getNativeContext();
+            var template = self.native.placementSpecs.template;
+
             // fixed dimensions passed to loader
             var dims;
             if (self.native.aspectRatio){
                 dims = self._getDimsFromAspectRatio();
+                context.imageDimensions = dims;
             }
             // figure out how ad markup should be injected or returned
             if (self.lazy){
@@ -287,16 +324,9 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                         'Can\'t determine desired image dimensions.';
                     return lazyCallback(err);
                 }
-                var secureImageUrl = getTransformUrlFromCanonical(self.native.creativeSpecs.secureImageUrl,
-                    dims.width,
-                    dims.height);
-                var imageUrl = getTransformUrlFromCanonical(self.native.creativeSpecs.imageUrl,
-                    dims.width,
-                    dims.height);
-                markup = replaceTemplateVar(markup,'imageUrl', imageUrl);
-                markup = replaceTemplateVar(markup,'secureImageUrl', secureImageUrl);
-                return lazyCallback(null, markup);
+                return lazyCallback(null, template, context);
             } else {
+                var markup = self.renderNativeTemplate(template, context);
                 var el = self._findTargetElement();
                 el.innerHTML = markup;
                 templatePostRender(el, self.native.creativeSpecs, dims);
@@ -353,6 +383,10 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                         self._doNativeRender(lazyCallback);
                     } else {
                         self._onNativePubLoad(lazyCallback);
+                    }
+                }  else if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && !xmlHttp.responseText){
+                    if (lazyCallback){
+                        return lazyCallback(null, null, null);
                     }
                 }
             };

@@ -274,7 +274,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             }
             // add separate <img> element for impTracker to beginning of the template
             if (context.impTracker){
-                template = '<img src="' + context.impTracker + '" height="1" width="1" border="0" alt="Advertisement"/>' + template;
+                template = template + '<img src="' + context.impTracker + '" height="1" width="1" border="0" alt="Advertisement"/>';
             }
             // advertisement disclosure is stored in placementContext, not creativeContext
             if (context.advertisementDisclosure){

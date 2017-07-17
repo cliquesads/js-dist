@@ -56,7 +56,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             return canonicalUrl.replace(/(image\/upload\/)(.*$)/g,"$1" + transform + "/$2");
         };
 
-        var templatePostRender = function(targetElement, creativeContext, dims){
+        var templatePostRender = function(targetElement, native, dims){
             // first, un-wrap element and re-insert template where <ins> was
             // this shouldn't re-render any remote sources, just move the DOM elements into the right placeholder
             var ad = targetElement.firstChild;
@@ -73,7 +73,10 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             window.setTimeout(function(){
                 var h = dims ? dims.height: image.clientHeight;
                 var w = dims ? dims.width: image.clientWidth;
-                image.src = getTransformUrlFromCanonical(creativeContext.secureImageUrl, w, h);
+                if (native.placementSpecs.minImageHeight){
+                    h = Math.max(h, native.placementSpecs.minImageHeight);
+                }
+                image.src = getTransformUrlFromCanonical(native.creativeSpecs.secureImageUrl, w, h);
             });
         };
 
@@ -296,7 +299,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 'brandDisclosurePrefix',
                 'headlineMaxLength',
                 'descriptionMaxLength',
-                'advertisementDisclosure'
+                'advertisementDisclosure',
+                'minImageHeight'
             ];
             placementParams.forEach(function(param){
                 context[param] = self.native.placementSpecs[param];
@@ -336,7 +340,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 var markup = self.renderNativeTemplate(template, context);
                 var el = self._findTargetElement();
                 el.innerHTML = markup;
-                templatePostRender(el, self.native.creativeSpecs, dims);
+                templatePostRender(el, self.native, dims);
             }
         };
 

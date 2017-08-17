@@ -76,6 +76,9 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 if (native.placementSpecs.minImageHeight){
                     h = Math.max(h, native.placementSpecs.minImageHeight);
                 }
+                if (native.placementSpecs.minImageWidth){
+                    w = Math.max(h, native.placementSpecs.minImageWidth);
+                }
                 image.src = getTransformUrlFromCanonical(native.creativeSpecs.secureImageUrl, w, h);
             });
         };

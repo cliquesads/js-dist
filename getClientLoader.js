@@ -135,6 +135,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             // deeper template options, including placeholder objects for native & display specifics
             this.native = {};
             this.display = {};
+            this.multiPaneNative = {};
 
             this.keywords = options.keywords || false;
 
@@ -207,6 +208,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          * it respects `aspectRatio.layout` above all else when determining which dimension is truly
          * height & which is truly width. So if `aspectRatio.layout` === 'landscape', width will be
          * the greater of the W:H, and vice-versa for 'portait'.
+         *
+         * Will work for both single native placements & multiPaneNative placements
          *
          * @returns {{width: (number|*), height: (number|*)}}
          * @private
@@ -327,9 +330,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          * Creates unified context object to pass to template
          * @private
          */
-        _Loader.prototype._getNativeContext = function(){
-            var self = this;
-            var context = self.native.creativeSpecs;
+        _Loader.prototype._getNativeContext = function(placementSpecs, creativeSpecs){
+            var context = creativeSpecs;
             // enumerate all of the properties of placement specs
             // and add them to context
             var placementParams = [
@@ -340,7 +342,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 'minImageHeight'
             ];
             placementParams.forEach(function(param){
-                context[param] = self.native.placementSpecs[param];
+                context[param] = placementSpecs[param];
             });
             return context;
         };

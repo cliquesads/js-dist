@@ -355,7 +355,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          */
         _Loader.prototype._doNativeRender = function(lazyCallback){
             var self = this;
-            var context = self._getNativeContext();
+            var context = self._getNativeContext(self.native.placementSpecs, self.native.creativeSpecs);
             var template = self.native.placementSpecs.template;
 
             // fixed dimensions passed to loader

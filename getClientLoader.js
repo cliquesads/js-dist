@@ -242,7 +242,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          * @returns {*}
          * @private
          */
-        _Loader.prototype._findTargetElement = function(){
+        _Loader.prototype.findTargetElement = function(){
             var self = this;
             var el;
             if (this.targetId && this.targetChildIndex){
@@ -389,7 +389,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             if (self.lazy){
                 return lazyCallback(null, markup);
             } else {
-                var el = self._findTargetElement();
+                var el = self.findTargetElement();
                 el.innerHTML = markup;
                 replaceScripts(el);
             }

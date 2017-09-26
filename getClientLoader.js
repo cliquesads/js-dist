@@ -150,7 +150,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             u += '?' + 'pid=' + this.pid + '&type=javascript&form-factor=' + this.formFactor;
             // add keywords to URL if available
             if (this.keywords) {
-                var keywords = this._parseKeywords(this.keywords);
+                var keywords = this.parseKeywords(this.keywords);
                 // keywords being null means error has been thrown, so don't append to URL;
                 if (keywords) u += '&keywords=' + keywords;
             }
@@ -179,9 +179,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          * Users can pass in keywords to options when instantiating CLoader, so need to
          * a) determine what type of keyword value has been passed (string or array of strings)
          * b) catch any parsing errors and warn user without erroring out.
-         * @private
          */
-        _Loader.prototype._parseKeywords = function(keywords){
+        _Loader.prototype.parseKeywords = function(keywords){
             var warning = 'Could not parse keywords: ' + keywords +
                 '. Keywords must be an array of strings or comma-separated values string.';
             var keywordStr;
@@ -212,9 +211,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          * Will work for both single native placements & multiPaneNative placements
          *
          * @returns {{width: (number|*), height: (number|*)}}
-         * @private
          */
-        _Loader.prototype._getDimsFromAspectRatio = function(){
+        _Loader.prototype.getDimsFromAspectRatio = function(){
             var self = this;
             var layout = self.native.aspectRatio.layout;
             var max = Math.max(self.native.aspectRatio.width,self.native.aspectRatio.height);
@@ -240,7 +238,6 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          * Finds target DOM node on the page where ad tag is to be inserted.
          *
          * @returns {*}
-         * @private
          */
         _Loader.prototype.findTargetElement = function(){
             var self = this;
@@ -328,9 +325,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
 
         /**
          * Creates unified context object to pass to template
-         * @private
          */
-        _Loader.prototype._getNativeContext = function(placementSpecs, creativeSpecs){
+        _Loader.prototype.getNativeContext = function(placementSpecs, creativeSpecs){
             var context = creativeSpecs;
             // enumerate all of the properties of placement specs
             // and add them to context
@@ -351,17 +347,16 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          *
          * @param lazyCallback only required applicable if this.lazy === true && this.type === 'native'
          * @returns {*}
-         * @private
          */
-        _Loader.prototype._doNativeRender = function(lazyCallback){
+        _Loader.prototype.doNativeRender = function(lazyCallback){
             var self = this;
-            var context = self._getNativeContext(self.native.placementSpecs, self.native.creativeSpecs);
+            var context = self.getNativeContext(self.native.placementSpecs, self.native.creativeSpecs);
             var template = self.native.placementSpecs.template;
 
             // fixed dimensions passed to loader
             var dims;
             if (self.native.aspectRatio){
-                dims = self._getDimsFromAspectRatio();
+                dims = self.getDimsFromAspectRatio();
                 context.imageDimensions = dims;
             }
             // figure out how ad markup should be injected or returned
@@ -377,13 +372,48 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 return lazyCallback(null, template, context);
             } else {
                 var markup = self.renderNativeTemplate(template, context);
-                var el = self._findTargetElement();
+                var el = self.findTargetElement();
                 el.innerHTML = markup;
                 templatePostRender(el, self.native, dims);
             }
         };
 
-        _Loader.prototype._doDisplayRender = function(lazyCallback){
+        /**
+         *
+         * @param lazyCallback only required applicable if this.lazy === true && this.type === 'native'
+         * @returns {*}
+         */
+        _Loader.prototype.doMultiPaneNativeRender = function(lazyCallback){
+            var self = this;
+            var context = self.getNativeContext(self.multiPaneNative.pane, );
+            var template = self.native.placementSpecs.template;
+
+            // fixed dimensions passed to loader
+            var dims;
+            if (self.native.aspectRatio){
+                dims = self.getDimsFromAspectRatio();
+                context.imageDimensions = dims;
+            }
+            // figure out how ad markup should be injected or returned
+            if (self.lazy){
+                // otherwise, don't perform all post-render steps and just
+                // do the last template variable injection before passing
+                // HTML as string to callback function
+                if (!dims){
+                    var err = 'Error: lazy loading requested but no aspectRatio provided. ' +
+                        'Can\'t determine desired image dimensions.';
+                    return lazyCallback(err);
+                }
+                return lazyCallback(null, template, context);
+            } else {
+                var markup = self.renderNativeTemplate(template, context);
+                var el = self.findTargetElement();
+                el.innerHTML = markup;
+                templatePostRender(el, self.native, dims);
+            }
+        };
+
+        _Loader.prototype.doDisplayRender = function(lazyCallback){
             var self = this;
             var markup = self.display.markup;
             if (self.lazy){
@@ -395,34 +425,48 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             }
         };
 
-        _Loader.prototype._loadDisplay = function(lazyCallback){
+        _Loader.prototype.loadDisplay = function(lazyCallback){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
                     self.display.markup = xmlHttp.responseText;
-                    self._doDisplayRender(lazyCallback);
+                    self.doDisplayRender(lazyCallback);
                 }
             };
             xmlHttp.open("GET", self.url, true); // true for asynchronous
             xmlHttp.send(null);
         };
 
-        _Loader.prototype._onNativePubLoad = function(lazyCallback){
+        _Loader.prototype.onNativePubLoad = function(lazyCallback){
             var self = this;
             var impUrl = self.native.placementSpecs.adm + '&form-factor=' + self.formFactor;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function() {
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
                     self.native.creativeSpecs = JSON.parse(xmlHttp.responseText);
-                    self._doNativeRender(lazyCallback);
+                    self.doNativeRender(lazyCallback);
                 }
             };
             xmlHttp.open("GET", impUrl, true); // true for asynchronous
             xmlHttp.send(null);
         };
 
-        _Loader.prototype._loadNative = function(lazyCallback){
+        _Loader.prototype.onMultiPaneNativePubLoad = function(lazyCallback){
+            var self = this;
+            var impUrl = self.native.placementSpecs.adm + '&form-factor=' + self.formFactor;
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                    self.native.creativeSpecs = JSON.parse(xmlHttp.responseText);
+                    self.doMultiPaneNativeRender(lazyCallback);
+                }
+            };
+            xmlHttp.open("GET", impUrl, true); // true for asynchronous
+            xmlHttp.send(null);
+        };
+
+        _Loader.prototype.loadNative = function(lazyCallback){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
@@ -430,9 +474,9 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     self.native.placementSpecs = JSON.parse(xmlHttp.responseText);
                     if (self.native.placementSpecs.test){
                         self.native.creativeSpecs = self.native.placementSpecs; // just for testing
-                        self._doNativeRender(lazyCallback);
+                        self.doNativeRender(lazyCallback);
                     } else {
-                        self._onNativePubLoad(lazyCallback);
+                        self.onNativePubLoad(lazyCallback);
                     }
                 }  else if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && !xmlHttp.responseText){
                     if (lazyCallback){
@@ -444,7 +488,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             xmlHttp.send(null);
         };
 
-        _Loader.prototype._loadMultiPaneNative = function(lazyCallback){
+        _Loader.prototype.loadMultiPaneNative = function(lazyCallback){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
@@ -452,10 +496,10 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     self.multiPaneNative.placementSpecs = JSON.parse(xmlHttp.responseText);
                     if (self.multiPaneNative.placementSpecs.test){
                         self.native.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs; // just for testing
-                        self._doMultiPaneNativeRender(lazyCallback);
+                        self.doMultiPaneNativeRender(lazyCallback);
                     } else {
                         self.native.creativeSpecs = [];
-                        self._onMultiPaneNativePubLoad(lazyCallback);
+                        self.onMultiPaneNativePubLoad(lazyCallback);
                     }
                 }  else if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && !xmlHttp.responseText){
                     if (lazyCallback){
@@ -471,13 +515,13 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var self = this;
             switch (this.type){
                 case 'native':
-                    self._loadNative(lazyCallback);
+                    self.loadNative(lazyCallback);
                     break;
                 case 'multiPaneNative':
-                    self._loadMultiPaneNative(lazyCallback);
+                    self.loadMultiPaneNative(lazyCallback);
                     break;
                 default:
-                    self._loadDisplay(lazyCallback);
+                    self.loadDisplay(lazyCallback);
             }
         };
 

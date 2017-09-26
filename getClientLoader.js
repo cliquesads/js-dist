@@ -62,11 +62,11 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          * transform URL & replace image source as necessary within native template.
          *
          * @param targetElement
-         * @param native
+         * @param context
          * @param dims
          * @private
          */
-        var _templatePostRender = function(targetElement, native, dims){
+        var _templatePostRender = function(targetElement, context, dims){
             // first, un-wrap element and re-insert template where <ins> was
             // this shouldn't re-render any remote sources, just move the DOM elements into the right placeholder
             var ad = targetElement.firstChild;
@@ -83,13 +83,13 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             window.setTimeout(function(){
                 var h = dims ? dims.height: image.clientHeight;
                 var w = dims ? dims.width: image.clientWidth;
-                if (native.placementSpecs.minImageHeight){
-                    h = Math.max(h, native.placementSpecs.minImageHeight);
+                if (context.minImageHeight){
+                    h = Math.max(h, context.minImageHeight);
                 }
-                if (native.placementSpecs.minImageWidth){
-                    w = Math.max(w, native.placementSpecs.minImageWidth);
+                if (context.minImageWidth){
+                    w = Math.max(w, context.minImageWidth);
                 }
-                image.src = _getTransformUrlFromCanonical(native.creativeSpecs.secureImageUrl, w, h);
+                image.src = _getTransformUrlFromCanonical(context.secureImageUrl, w, h);
             });
         };
 
@@ -392,22 +392,31 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 var markup = self.renderNativeTemplate(template, context);
                 var el = self.findTargetElement();
                 el.innerHTML = markup;
-                _templatePostRender(el, self.native, dims);
+                _templatePostRender(el, context, dims);
             }
         };
 
+        _Loader.prototype.getPanePlaceholderAttribute = function(index){
+            return 'data-cliques-pane-' + index;
+        };
+
+        _Loader.prototype.getPanePlaceholder = function(index){
+            return '<ins ' + this.getPanePlaceholderAttribute(index) + '></ins>';
+        };
+
         /**
+         * Renders a single pane of a multiPaneNative placement
          *
          * @param lazyCallback only required applicable if this.lazy === true && this.type === 'native'
+         * @param index
          * @returns {*}
          */
-        _Loader.prototype.doMultiPaneNativeRender = function(lazyCallback){
+        _Loader.prototype.doMultiPaneNativeRender = function(index, lazyCallback){
             var self = this;
-            for (var i=0; i<self.multiPaneNative.count; i++){
-
-            }
-            var context = self.getNativeContext(self.multiPaneNative.pane, self.);
-            var template = self.native.placementSpecs.template;
+            var context = self.getNativeContext(
+                self.multiPaneNative.placementSpecs.pane,
+                self.multiPaneNative.creativeSpecs[index]);
+            var template = self.multiPaneNative.placementSpecs.pane.template;
 
             // fixed dimensions passed to loader
             var dims;
@@ -427,10 +436,13 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 }
                 return lazyCallback(null, template, context);
             } else {
+                // now render template
                 var markup = self.renderNativeTemplate(template, context);
-                var el = self.findTargetElement();
-                el.innerHTML = markup;
-                _templatePostRender(el, self.native, dims);
+                // finally, replace placeholder <ins> tag with template and perform post-render
+                var parent = self.findTargetElement();
+                var placeholder = _findChildWithAttribute(parent, self.getPanePlaceholderAttribute(index));
+                placeholder.innerHTML = markup;
+                _templatePostRender(placeholder, context, dims);
             }
         };
 
@@ -525,6 +537,24 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
         };
 
         /**
+         * Renders & inserts the multiPaneNative placement wrapper HTML template
+         * into the DOM. Done before individual panes are loaded so that they
+         * can be inserted as their ad calls resolve, rather than all at once.
+         */
+        _Loader.prototype.renderMultiPaneWrapper = function(){
+            var self = this;
+            var template = self.multiPaneNative.placementSpecs.wrapper;
+            // create placeholder ins tags
+            var panes = '';
+            for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++){
+                panes += self.getPanePlaceholder(i);
+            }
+            template = _replaceTemplateVar(template,'panes',panes);
+            var el = self.findTargetElement();
+            el.innerHTML = template;
+        };
+
+        /**
          * Calls the urls provided by winning bid's `adms` array of adserver URLs,
          * and kicks off parallel template renders. Must be called AFTER exchange has been called,
          * hence the name.
@@ -533,18 +563,29 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          */
         _Loader.prototype.onMultiPaneNativePubLoad = function(lazyCallback){
             var self = this;
-            var impUrl = self.native.placementSpecs.adm + '&form-factor=' + self.formFactor;
-            var xmlHttp = new XMLHttpRequest();
-
-            // TODO: PARALLELIZE
-            // xmlHttp.onreadystatechange = function() {
-            //     if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-            //         self.native.creativeSpecs = JSON.parse(xmlHttp.responseText);
-            //         self.doMultiPaneNativeRender(lazyCallback);
-            //     }
-            // };
-            // xmlHttp.open("GET", impUrl, true); // true for asynchronous
-            // xmlHttp.send(null);
+            // write the wrapper template to the DOM
+            self.renderMultiPaneWrapper();
+            var count = self.multiPaneNative.placementSpecs.count;
+            // then loop over ad-server URL's passed back by each winning bid and create Ajax call
+            // for each one.
+            self.multiPaneNative.creativeSpecs = new Array(count);
+            var requests = new Array(count);
+            for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++){
+                var adm = self.multiPaneNative.creativeSpecs[i];
+                var impUrl = adm + '&form-factor=' + self.formFactor;
+                requests[i] = new XMLHttpRequest();
+                var getCallback = function(index){
+                    return function(){
+                        if (requests[index].readyState == 4 && requests[index].status == 200) {
+                            self.multiPaneNative.creativeSpecs[index] = JSON.parse(requests[index].responseText);
+                            self.doMultiPaneNativeRender(index, lazyCallback);
+                        }
+                    }
+                };
+                requests[i].onreadystatechange = getCallback(i);
+                requests[i].open("GET", impUrl, true); // true for asynchronous
+                requests[i].send(null);
+            }
         };
 
 
@@ -563,7 +604,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && xmlHttp.responseText) {
                     self.multiPaneNative.placementSpecs = JSON.parse(xmlHttp.responseText);
                     if (self.multiPaneNative.placementSpecs.test){
-                        self.native.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs; // just for testing
+                        self.multiPaneNative.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs; // just for testing
                         self.doMultiPaneNativeRender(lazyCallback);
                     } else {
                         self.native.creativeSpecs = [];

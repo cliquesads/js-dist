@@ -442,9 +442,41 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             xmlHttp.send(null);
         };
 
+        _Loader.prototype._loadMultiPaneNative = function(lazyCallback){
+            var self = this;
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function(){
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && xmlHttp.responseText) {
+                    self.multiPaneNative.placementSpecs = JSON.parse(xmlHttp.responseText);
+                    if (self.multiPaneNative.placementSpecs.test){
+                        self.native.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs; // just for testing
+                        self._doMultiPaneNativeRender(lazyCallback);
+                    } else {
+                        self.native.creativeSpecs = [];
+                        self._onMultiPaneNativePubLoad(lazyCallback);
+                    }
+                }  else if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && !xmlHttp.responseText){
+                    if (lazyCallback){
+                        return lazyCallback(null, null, null);
+                    }
+                }
+            };
+            xmlHttp.open("GET", self.url, true); // true for asynchronous
+            xmlHttp.send(null);
+        };
+
         _Loader.prototype.main = function (lazyCallback){
             var self = this;
-            this.type === 'native' ? self._loadNative(lazyCallback) : self._loadDisplay(lazyCallback);
+            switch (this.type){
+                case 'native':
+                    self._loadNative(lazyCallback);
+                    break;
+                case 'multiPaneNative':
+                    self._loadMultiPaneNative(lazyCallback);
+                    break;
+                default:
+                    self._loadDisplay(lazyCallback);
+            }
         };
 
         return {

@@ -136,6 +136,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             this.native = {};
             this.display = {};
 
+            this.keywords = options.keywords || false;
+
             // if targetId && targetChildIndex are set, will override 'lazy' flag behavior,
             // i.e. main() will render ad in target elements.
             this.targetId = options.targetId;
@@ -145,6 +147,12 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var u = (this.secure ? 'https://' + this.exchange_secure_hostname : 'http://' + this.exchange_hostname);
             u += this.pub_path;
             u += '?' + 'pid=' + this.pid + '&type=javascript&form-factor=' + this.formFactor;
+            // add keywords to URL if available
+            if (this.keywords) {
+                var keywords = this._parseKeywords(this.keywords);
+                // keywords being null means error has been thrown, so don't append to URL;
+                if (keywords) u += '&keywords=' + keywords;
+            }
             this.url = encodeURI(u);
 
             // For fixed aspectRatio images. If not specified, will deduce dimensions from rendered h & w of image
@@ -164,6 +172,32 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             // if 'true', will return template HTML from this.main();
             // NOTE: If set to 'true', main() MUST be called w/ callback function
             this.lazy = options.lazy || false;
+        };
+
+        /**
+         * Users can pass in keywords to options when instantiating CLoader, so need to
+         * a) determine what type of keyword value has been passed (string or array of strings)
+         * b) catch any parsing errors and warn user without erroring out.
+         * @private
+         */
+        _Loader.prototype._parseKeywords = function(keywords){
+            var warning = 'Could not parse keywords: ' + keywords +
+                '. Keywords must be an array of strings or comma-separated values string.';
+            var keywordStr;
+            if (keywords){
+                if (typeof keywords === 'object'){
+                    try {
+                        keywordStr = keywords.join(',');
+                    } catch (e) {
+                        console.warn(warning);
+                    }
+                } else if (typeof keywords === 'string') {
+                    keywordStr = keywords;
+                } else {
+                    console.warn(warning);
+                }
+            }
+            return keywordStr;
         };
 
         /**

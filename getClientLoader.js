@@ -543,7 +543,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          */
         _Loader.prototype.renderMultiPaneWrapper = function(){
             var self = this;
-            var template = self.multiPaneNative.placementSpecs.wrapper;
+            var template = self.multiPaneNative.placementSpecs.wrapper.template;
             // create placeholder ins tags
             var panes = '';
             for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++){
@@ -571,7 +571,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             self.multiPaneNative.creativeSpecs = new Array(count);
             var requests = new Array(count);
             for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++){
-                var adm = self.multiPaneNative.creativeSpecs[i];
+                var adm = self.multiPaneNative.placementSpecs.adms[i];
                 var impUrl = adm + '&form-factor=' + self.formFactor;
                 requests[i] = new XMLHttpRequest();
                 var getCallback = function(index){
@@ -587,7 +587,6 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 requests[i].send(null);
             }
         };
-
 
         /**
          * Primary loader function for multiPaneNative placement types. Kicks off
@@ -607,7 +606,6 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                         self.multiPaneNative.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs; // just for testing
                         self.doMultiPaneNativeRender(lazyCallback);
                     } else {
-                        self.native.creativeSpecs = [];
                         self.onMultiPaneNativePubLoad(lazyCallback);
                     }
                 }  else if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && !xmlHttp.responseText){

@@ -597,11 +597,11 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var requests = new Array(count);
             for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++){
                 var adm = self.multiPaneNative.placementSpecs.adms[i];
-                var impUrl = adm + '&form-factor=' + self.formFactor;
+                var impUrl = adm.replace('${FORM-FACTOR}',self.formFactor);
                 requests[i] = new XMLHttpRequest();
                 var getCallback = function(index){
                     return function(){
-                        if (requests[index].readyState == 4 && requests[index].status == 200) {
+                        if (requests[index].readyState == 4 && requests[index].status == 200){
                             self.multiPaneNative.creativeSpecs[index] = JSON.parse(requests[index].responseText);
                             self.doMultiPaneNativeRender(index, lazyCallback);
                         }

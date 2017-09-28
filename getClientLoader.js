@@ -165,6 +165,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             this.pid = options.pid;
             this.secure = options.secure;
             this.type = options.type || 'display';
+            this.debug = options.debug;
 
             // determine formFactor right upfront
             this.formFactor = _isMobile() ? 'mobile' : 'desktop';
@@ -190,6 +191,11 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 var keywords = this.parseKeywords(this.keywords);
                 // keywords being null means error has been thrown, so don't append to URL;
                 if (keywords) u += '&keywords=' + keywords;
+            }
+            // add debug parameter if true, which will tell exchange to send
+            // back additional debugging data along with response.
+            if (this.debug){
+                u += '&debug=true';
             }
             this.url = encodeURI(u);
 
@@ -543,17 +549,23 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
-                if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && xmlHttp.responseText) {
-                    self.native.placementSpecs = JSON.parse(xmlHttp.responseText);
-                    if (self.native.placementSpecs.test){
-                        self.native.creativeSpecs = self.native.placementSpecs; // just for testing
-                        self.doNativeRender(lazyCallback);
-                    } else {
-                        self.onNativePubLoad(lazyCallback);
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                    var responseJson = JSON.parse(xmlHttp.responseText);
+                    if (self.debug){
+                        self.debugData = responseJson.debug;
                     }
-                }  else if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && !xmlHttp.responseText){
-                    if (lazyCallback){
-                        return lazyCallback(null, null, null);
+                    if (!responseJson.default){
+                        self.native.placementSpecs = responseJson;
+                        if (self.native.placementSpecs.test){
+                            self.native.creativeSpecs = self.native.placementSpecs; // just for testing
+                            self.doNativeRender(lazyCallback);
+                        } else {
+                            self.onNativePubLoad(lazyCallback);
+                        }
+                    } else {
+                        if (lazyCallback){
+                            return lazyCallback(null, null, null);
+                        }
                     }
                 }
             };
@@ -625,17 +637,27 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
-                if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && xmlHttp.responseText) {
-                    self.multiPaneNative.placementSpecs = JSON.parse(xmlHttp.responseText);
-                    if (self.multiPaneNative.placementSpecs.test){
-                        self.multiPaneNative.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs; // just for testing
-                        self.doMultiPaneNativeRender(lazyCallback);
-                    } else {
-                        self.onMultiPaneNativePubLoad(lazyCallback);
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                    var responseJson = JSON.parse(xmlHttp.responseText);
+                    if (self.debug){
+                        self.debugData = responseJson.debug;
                     }
-                }  else if (xmlHttp.readyState == 4 && xmlHttp.status == 200 && !xmlHttp.responseText){
-                    if (lazyCallback){
-                        return lazyCallback(null, null, null);
+                    if (!responseJson.default){
+                        self.multiPaneNative.placementSpecs = responseJson;
+                        if (!self.multiPaneNative.placementSpecs){
+                            if (lazyCallback) return lazyCallback(null, null, null);
+                            return;
+                        }
+                        if (self.multiPaneNative.placementSpecs.test){
+                            self.multiPaneNative.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs; // just for testing
+                            self.doMultiPaneNativeRender(lazyCallback);
+                        } else {
+                            self.onMultiPaneNativePubLoad(lazyCallback);
+                        }
+                    } else {
+                        if (lazyCallback){
+                            return lazyCallback(null, null, null);
+                        }
                     }
                 }
             };

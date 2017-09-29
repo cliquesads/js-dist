@@ -176,6 +176,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             this.multiPaneNative = {};
 
             this.keywords = options.keywords || false;
+            this.events = options.events || {};
 
             // if targetId && targetChildIndex are set, will override 'lazy' flag behavior,
             // i.e. main() will render ad in target elements.
@@ -216,6 +217,20 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             // if 'true', will return template HTML from this.main();
             // NOTE: If set to 'true', main() MUST be called w/ callback function
             this.lazy = options.lazy || false;
+        };
+
+        /**
+         * Tiny wrapper to invoke event listeners.
+         *
+         * @param event
+         * @param err
+         * @param arg1
+         * @private
+         */
+        _Loader.prototype._emitEvent = function(event, err, arg1){
+            if (this.events[event]){
+                this.events[event](err, arg1);
+            }
         };
 
         /**
@@ -399,31 +414,40 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          */
         _Loader.prototype.doNativeRender = function(lazyCallback){
             var self = this;
-            var context = self.getNativeContext(self.native.placementSpecs, self.native.creativeSpecs);
-            var template = self.native.placementSpecs.template;
+            try {
+                var context = self.getNativeContext(self.native.placementSpecs, self.native.creativeSpecs);
+                var template = self.native.placementSpecs.template;
 
-            // fixed dimensions passed to loader
-            var dims;
-            if (self.native.aspectRatio){
-                dims = self.getDimsFromAspectRatio();
-                context.imageDimensions = dims;
-            }
-            // figure out how ad markup should be injected or returned
-            if (self.lazy){
-                // otherwise, don't perform all post-render steps and just
-                // do the last template variable injection before passing
-                // HTML as string to callback function
-                if (!dims){
-                    var err = 'Error: lazy loading requested but no aspectRatio provided. ' +
-                        'Can\'t determine desired image dimensions.';
-                    return lazyCallback(err);
+                // fixed dimensions passed to loader
+                var dims;
+                if (self.native.aspectRatio){
+                    dims = self.getDimsFromAspectRatio();
+                    context.imageDimensions = dims;
                 }
-                return lazyCallback(null, template, context);
-            } else {
-                var markup = self.renderNativeTemplate(template, context);
-                var el = self.findTargetElement(true);
-                el.innerHTML = markup;
-                _templatePostRender(el, context, dims);
+                // figure out how ad markup should be injected or returned
+                if (self.lazy){
+                    // otherwise, don't perform all post-render steps and just
+                    // do the last template variable injection before passing
+                    // HTML as string to callback function
+                    if (!dims){
+                        var err = 'Error: lazy loading requested but no aspectRatio provided. ' +
+                            'Can\'t determine desired image dimensions.';
+                        self._emitEvent('adRendered', err, null);
+                        return lazyCallback(err);
+                    }
+                    return lazyCallback(null, template, context);
+                } else {
+                    var markup = self.renderNativeTemplate(template, context);
+                    var el = self.findTargetElement(true);
+                    el.innerHTML = markup;
+                    // call event hook
+                    self._emitEvent('adRendered', null, markup);
+                    // finally, do post-render steps
+                    _templatePostRender(el, context, dims);
+                }
+            } catch (e){
+                lazyCallback(e);
+                self._emitEvent('adRendered', e, null);
             }
         };
 
@@ -444,36 +468,45 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          */
         _Loader.prototype.doMultiPaneNativeRender = function(index, lazyCallback){
             var self = this;
-            var context = self.getNativeContext(
-                self.multiPaneNative.placementSpecs.pane,
-                self.multiPaneNative.creativeSpecs[index]);
-            var template = self.multiPaneNative.placementSpecs.pane.template;
+            try {
+                var context = self.getNativeContext(
+                    self.multiPaneNative.placementSpecs.pane,
+                    self.multiPaneNative.creativeSpecs[index]);
+                var template = self.multiPaneNative.placementSpecs.pane.template;
 
-            // fixed dimensions passed to loader
-            var dims;
-            if (self.native.aspectRatio){
-                dims = self.getDimsFromAspectRatio();
-                context.imageDimensions = dims;
-            }
-            // figure out how ad markup should be injected or returned
-            if (self.lazy){
-                // otherwise, don't perform all post-render steps and just
-                // do the last template variable injection before passing
-                // HTML as string to callback function
-                if (!dims){
-                    var err = 'Error: lazy loading requested but no aspectRatio provided. ' +
-                        'Can\'t determine desired image dimensions.';
-                    return lazyCallback(err);
+                // fixed dimensions passed to loader
+                var dims;
+                if (self.native.aspectRatio) {
+                    dims = self.getDimsFromAspectRatio();
+                    context.imageDimensions = dims;
                 }
-                return lazyCallback(null, template, context);
-            } else {
-                // now render template
-                var markup = self.renderNativeTemplate(template, context);
-                // finally, replace placeholder <ins> tag with template and perform post-render
-                var parent = self.findTargetElement(false);
-                var placeholder = _findChildWithAttribute(parent, self.getPanePlaceholderAttribute(index));
-                placeholder.innerHTML = markup;
-                _templatePostRender(placeholder, context, dims);
+                // figure out how ad markup should be injected or returned
+                if (self.lazy) {
+                    // otherwise, don't perform all post-render steps and just
+                    // do the last template variable injection before passing
+                    // HTML as string to callback function
+                    if (!dims) {
+                        var err = 'Error: lazy loading requested but no aspectRatio provided. ' +
+                            'Can\'t determine desired image dimensions.';
+                        self._emitEvent('adRendered', err, null);
+                        return lazyCallback(err);
+                    }
+                    return lazyCallback(null, template, context);
+                } else {
+                    // now render template
+                    var markup = self.renderNativeTemplate(template, context);
+                    // finally, replace placeholder <ins> tag with template and perform post-render
+                    var parent = self.findTargetElement(false);
+                    var placeholder = _findChildWithAttribute(parent, self.getPanePlaceholderAttribute(index));
+                    placeholder.innerHTML = markup;
+                    // call event hook
+                    self._emitEvent('adRendered', null, markup);
+                    // finally, do post-render steps
+                    _templatePostRender(placeholder, context, dims);
+                }
+            } catch (e){
+                lazyCallback(e);
+                self._emitEvent('adRendered', e, null);
             }
         };
 
@@ -486,13 +519,19 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          */
         _Loader.prototype.doDisplayRender = function(lazyCallback){
             var self = this;
-            var markup = self.display.markup;
-            if (self.lazy){
-                return lazyCallback(null, markup);
-            } else {
-                var el = self.findTargetElement(true);
-                el.innerHTML = markup;
-                _replaceScripts(el);
+            try {
+                var markup = self.display.markup;
+                if (self.lazy){
+                    return lazyCallback(null, markup);
+                } else {
+                    var el = self.findTargetElement(true);
+                    el.innerHTML = markup;
+                    self._emitEvent('adRendered', null, markup);
+                    _replaceScripts(el);
+                }
+            } catch (e){
+                self._emitEvent('adRendered', e);
+                lazyCallback(e);
             }
         };
 
@@ -509,7 +548,11 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             xmlHttp.onreadystatechange = function(){
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
                     self.display.markup = xmlHttp.responseText;
+                    // call event hook
+                    self._emitEvent('auctionCompleted', null, self.display.markup);
                     self.doDisplayRender(lazyCallback);
+                } else if (xmlHttp.readyState == 4 && xmlHttp.status != 200){
+                    self._emitEvent('auctionCompleted', 'Response ' + xmlHttp.status + ' received from exchange', null);
                 }
             };
             xmlHttp.open("GET", self.url, true); // true for asynchronous
@@ -530,7 +573,10 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             xmlHttp.onreadystatechange = function() {
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
                     self.native.creativeSpecs = JSON.parse(xmlHttp.responseText);
+                    self._emitEvent('adMarkupLoaded', null, self.native.creativeSpecs);
                     self.doNativeRender(lazyCallback);
+                } else if (xmlHttp.readyState == 4 && xmlHttp.status != 200) {
+                    self._emitEvent('adMarkupLoaded', 'Response ' + xmlHttp.status + ' received from exchange', null);
                 }
             };
             xmlHttp.open("GET", impUrl, true); // true for asynchronous
@@ -567,6 +613,10 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                             return lazyCallback(null, null, null);
                         }
                     }
+                    // call event hook
+                    self._emitEvent('auctionCompleted', null, responseJson);
+                } else if (xmlHttp.readyState == 4 && xmlHttp.status != 200) {
+                    self._emitEvent('auctionCompleted', 'Response ' + xmlHttp.status + ' received from exchange', null);
                 }
             };
             xmlHttp.open("GET", self.url, true); // true for asynchronous
@@ -580,15 +630,20 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
          */
         _Loader.prototype.renderMultiPaneWrapper = function(){
             var self = this;
-            var template = self.multiPaneNative.placementSpecs.wrapper.template;
-            // create placeholder ins tags
-            var panes = '';
-            for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++){
-                panes += self.getPanePlaceholder(i);
+            try {
+                var template = self.multiPaneNative.placementSpecs.wrapper.template;
+                // create placeholder ins tags
+                var panes = '';
+                for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++){
+                    panes += self.getPanePlaceholder(i);
+                }
+                template = _replaceTemplateVar(template,'panes',panes);
+                var el = self.findTargetElement(true);
+                el.innerHTML = template;
+                self._emitEvent('adRendered', null, template);
+            } catch (e){
+                self._emitEvent('adRendered', e, null);
             }
-            template = _replaceTemplateVar(template,'panes',panes);
-            var el = self.findTargetElement(true);
-            el.innerHTML = template;
         };
 
         /**
@@ -615,7 +670,12 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     return function(){
                         if (requests[index].readyState == 4 && requests[index].status == 200){
                             self.multiPaneNative.creativeSpecs[index] = JSON.parse(requests[index].responseText);
+                            // call event hook first
+                            self._emitEvent('adMarkupLoaded', null, self.multiPaneNative.creativeSpecs[index]);
+                            // now do the render
                             self.doMultiPaneNativeRender(index, lazyCallback);
+                        } else if (requests[index].readyState == 4 && requests[index].status != 200){
+                            self._emitEvent('adMarkupLoaded', 'Response ' + requests[index].status + ' received from exchange', null);
                         }
                     }
                 };
@@ -659,10 +719,37 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                             return lazyCallback(null, null, null);
                         }
                     }
+                    // call event hook
+                    self._emitEvent('auctionCompleted', null, responseJson);
+                } else if (xmlHttp.readyState == 4 && xmlHttp.status != 200){
+                    self._emitEvent('auctionCompleted', 'Response ' + xmlHttp.status + ' received from exchange', null);
                 }
             };
             xmlHttp.open("GET", self.url, true); // true for asynchronous
             xmlHttp.send(null);
+        };
+
+        /************************************/
+        /*********** EVENT HOOKS ************/
+        /************************************/
+
+        /**
+         * Called after response is received from ad exchange server.
+         *
+         * - `auctionCompleted`: Called after response is received from ad exchange server.
+         *  - `callback` takes `(err, response)`. If placement is 'native' or 'multiPaneNative', response will be
+         *      the response JSON, otherwise will be the response text as a string
+         * - `adMarkupLoaded`: Called after response is received from ad server for specific creativegroup endpoint.
+         *      NOTE: Will NOT get called when placement.type == 'display', since display ads are all loaded
+         *      via iFrame which is returned from the exchange server, rather than via Ajax call to the ad-server.
+         *  - `callback` takes `(err, response)`. Response is response JSON with the ad markup.
+         * - `adRendered`: Called after individual ad template is rendered. For multiPaneNative ads, will
+         *      be called multiple times: once for the wrapper template, and once for each inividual pane,
+         *      as they are all rendered independently.
+         *  - `callback` takes `(err, markup)`, markup being the rendered string of ad HTML.
+         */
+        _Loader.prototype.on = function(event, callback){
+            this.events[event] = callback;
         };
 
         /**

@@ -446,7 +446,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     _templatePostRender(el, context, dims);
                 }
             } catch (e){
-                lazyCallback(e);
+                if (lazyCallback) lazyCallback(e);
                 self._emitEvent('adRendered', e, null);
             }
         };
@@ -505,7 +505,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     _templatePostRender(placeholder, context, dims);
                 }
             } catch (e){
-                lazyCallback(e);
+                if (lazyCallback) lazyCallback(e);
                 self._emitEvent('adRendered', e, null);
             }
         };
@@ -531,7 +531,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 }
             } catch (e){
                 self._emitEvent('adRendered', e);
-                lazyCallback(e);
+                if (lazyCallback) lazyCallback(e);
             }
         };
 

@@ -670,6 +670,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     return function(){
                         if (requests[index].readyState == 4 && requests[index].status == 200){
                             self.multiPaneNative.creativeSpecs[index] = JSON.parse(requests[index].responseText);
+                            self.multiPaneNative.creativeSpecs[index].index = index;
                             // call event hook first
                             self._emitEvent('adMarkupLoaded', null, self.multiPaneNative.creativeSpecs[index]);
                             // now do the render

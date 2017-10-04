@@ -637,6 +637,11 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++){
                     panes += self.getPanePlaceholder(i);
                 }
+                // add custom attribute for screenshot crawler
+                // sort of a hack for now, will not work if panes template variable is changed
+                var re = new RegExp('(.*)(>)(.*?{{ panes }}.*?)','g');
+                template = template.replace(re, '$1 data-cliques-multi-pane-native$2$3');
+                // populate template variable
                 template = _replaceTemplateVar(template,'panes',panes);
                 var el = self.findTargetElement(true);
                 el.innerHTML = template;

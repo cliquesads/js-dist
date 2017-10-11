@@ -496,7 +496,10 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     // now render template
                     var markup = self.renderNativeTemplate(template, context);
                     // finally, replace placeholder <ins> tag with template and perform post-render
-                    var parent = self.findTargetElement(false);
+                    // get parent of target just in case target has been unwrapped and template wrapper contains
+                    // multiple root nodes, in which case selecting just the target index child will not necessarily
+                    // return the target node.
+                    var parent = self.findTargetElement(false).parentElement;
                     var placeholder = _findChildWithAttribute(parent, self.getPanePlaceholderAttribute(index));
                     placeholder.innerHTML = markup;
                     // call event hook
@@ -645,6 +648,15 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 template = _replaceTemplateVar(template,'panes',panes);
                 var el = self.findTargetElement(true);
                 el.innerHTML = template;
+                // now unwrap template <ins>
+                var parent = el.parentElement;
+                var childrenLength = el.children.length;
+                for (var j=0; j< childrenLength; j++){
+                    // node.insertBefore pops the element from the children array,
+                    // so just push the 0th element for each j
+                    parent.insertBefore(el.children[0], el);
+                }
+                parent.removeChild(el);
                 self._emitEvent('adRendered', null, template);
             } catch (e){
                 self._emitEvent('adRendered', e, null);

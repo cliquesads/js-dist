@@ -52,6 +52,11 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
         };
 
         var _getTransformUrlFromCanonical = function(canonicalUrl, width, height){
+            // check if browser supports devicePixelRatio prop, if so, scale image w & h by that
+            if (window.devicePixelRatio){
+                height = window.devicePixelRatio * height;
+                width = window.devicePixelRatio * width;
+            }
             var transform = 'c_thumb,g_auto,h_' + height + ',w_' + width;
             return canonicalUrl.replace(/(image\/upload\/)(.*$)/g,"$1" + transform + "/$2");
         };

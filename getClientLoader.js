@@ -187,6 +187,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             // i.e. main() will render ad in target elements.
             this.targetId = options.targetId;
             this.targetChildIndex = options.targetChildIndex;
+            this.dynamicInsertion = (this.targetId && this.targetChildIndex);
 
             // Form ad exchange URL
             var u = (this.secure ? 'https://' + this.exchange_secure_hostname : 'http://' + this.exchange_hostname);
@@ -309,7 +310,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
         _Loader.prototype.findTargetElement = function(insertBefore){
             var self = this;
             var el;
-            if (this.targetId && this.targetChildIndex){
+            if (this.dynamicInsertion){
                 // if both targetId & targetChildIndex are present, then
                 // creates an <ins> element as the {{targetChildIndex}}-th child of
                 // the element w/ ID {{targetId}}
@@ -451,6 +452,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     _templatePostRender(el, context, dims);
                 }
             } catch (e){
+                console.error('Error rendering Cliques native ad: ' + e);
                 if (lazyCallback) lazyCallback(e);
                 self._emitEvent('adRendered', e, null);
             }
@@ -513,6 +515,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     _templatePostRender(placeholder, context, dims);
                 }
             } catch (e){
+                console.error('Error rendering Cliques multiPaneNative pane: ' + e);
                 if (lazyCallback) lazyCallback(e);
                 self._emitEvent('adRendered', e, null);
             }
@@ -538,6 +541,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     _replaceScripts(el);
                 }
             } catch (e){
+                console.error('Error rendering Cliques display ad: ' + e);
                 self._emitEvent('adRendered', e);
                 if (lazyCallback) lazyCallback(e);
             }
@@ -653,17 +657,21 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 template = _replaceTemplateVar(template,'panes',panes);
                 var el = self.findTargetElement(true);
                 el.innerHTML = template;
-                // now unwrap template <ins>
-                var parent = el.parentElement;
-                var childrenLength = el.children.length;
-                for (var j=0; j< childrenLength; j++){
-                    // node.insertBefore pops the element from the children array,
-                    // so just push the 0th element for each j
-                    parent.insertBefore(el.children[0], el);
+                // if dynamic insertion is set, unwrap template from parent <ins> tag
+                if (this.dynamicInsertion){
+                    // now unwrap template <ins>
+                    var parent = el.parentElement;
+                    var childrenLength = el.children.length;
+                    for (var j=0; j< childrenLength; j++){
+                        // node.insertBefore pops the element from the children array,
+                        // so just push the 0th element for each j
+                        parent.insertBefore(el.children[0], el);
+                    }
+                    parent.removeChild(el);
                 }
-                parent.removeChild(el);
                 self._emitEvent('adRendered', null, template);
             } catch (e){
+                console.error('Error rendering Cliques multiPaneNative wrapper template: ' + e);
                 self._emitEvent('adRendered', e, null);
             }
         };

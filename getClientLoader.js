@@ -54,8 +54,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
         var _getTransformUrlFromCanonical = function(canonicalUrl, width, height){
             // check if browser supports devicePixelRatio prop, if so, scale image w & h by that
             if (window.devicePixelRatio){
-                height = window.devicePixelRatio * height;
-                width = window.devicePixelRatio * width;
+                height = Math.round(window.devicePixelRatio * height);
+                width = Math.round(window.devicePixelRatio * width);
             }
             var transform = 'c_thumb,g_auto,h_' + height + ',w_' + width;
             return canonicalUrl.replace(/(image\/upload\/)(.*$)/g,"$1" + transform + "/$2");
@@ -651,8 +651,9 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 }
                 // add custom attribute for screenshot crawler
                 // sort of a hack for now, will not work if panes template variable is changed
-                var re = new RegExp('(.*)(>)(.*?{{ panes }}.*?)','g');
-                template = template.replace(re, '$1 data-cliques-multi-pane-native$2$3');
+                var re = /<(.*?)>/;
+                // just add attribute to first DOM tag found.
+                template = template.replace(re, '<$1 data-cliques-multi-pane-native>');
                 // populate template variable
                 template = _replaceTemplateVar(template,'panes',panes);
                 var el = self.findTargetElement(true);

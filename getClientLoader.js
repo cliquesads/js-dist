@@ -741,8 +741,13 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                             return;
                         }
                         if (self.multiPaneNative.placementSpecs.test){
-                            self.multiPaneNative.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs; // just for testing
-                            self.doMultiPaneNativeRender(lazyCallback);
+                            // just for testing, render templates with test creative data passed by exchange
+                            self.multiPaneNative.creativeSpecs = self.multiPaneNative.placementSpecs.creativeSpecs;
+                            self.renderMultiPaneWrapper();
+                            for (var i=0; i<self.multiPaneNative.placementSpecs.count; i++) {
+                                self._emitEvent('adMarkupLoaded', null, self.multiPaneNative.creativeSpecs[i]);
+                                self.doMultiPaneNativeRender(i, lazyCallback);
+                            }
                         } else {
                             self.onMultiPaneNativePubLoad(lazyCallback);
                         }

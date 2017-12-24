@@ -29,7 +29,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
         };
 
         var _addAttributeToTemplateVarElement = function(template, varName, attributeTitle){
-            var re = new RegExp('({{[\\s|]' + varName + '[\\s|]}}.*?)(>)','g');
+            var re = new RegExp('({{[\\s|]' + varName + '[\\s|]}}[\\s\\S]*?)(>)','g');
             return template.replace(re, '$1 ' + attributeTitle + '$2');
         };
 

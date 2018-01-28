@@ -56,8 +56,15 @@ module.exports = function(grunt) {
 		var config = require('config'),
             pubPath = require('@cliques/cliques-node-utils').urls.PUB_PATH,
             exchangeHostname = config.get('Exchange.http.external.hostname'),
-            exchangeSecureHostname = config.get('Exchange.https.external.hostname');
-
+            exchangeSecureHostname = config.get('Exchange.https.external.hostname'),
+            port = config.get('Exchange.http.external.port'),
+            securePort = config.get('Exchange.https.external.port');
+        if (port){
+            exchangeHostname += ':' + port;
+        }
+        if (securePort){
+            exchangeSecureHostname += ':' + securePort;
+        }
         grunt.log.ok('NODE_ENV set to ' + process.env.NODE_ENV);
 
 		grunt.config.set('exchangeHostname', exchangeHostname);

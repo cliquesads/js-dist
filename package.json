@@ -4,7 +4,7 @@
   "description": "Build repo for cloader.js",
   "main": "getClientLoader.js",
   "dependencies": {
-    "@cliques/cliques-node-utils": "^0.2.31",
+    "@cliques/cliques-node-utils": "^0.4.12",
     "config": "^1.15.0",
     "grunt-cli": "~0.1.13"
   },

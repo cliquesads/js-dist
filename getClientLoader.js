@@ -160,6 +160,20 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             return check;
         };
 
+        /**
+         * Serializes object to query string
+         * @param obj
+         * @returns {string}
+         */
+        var serializeObject = function(obj) {
+            var str = [];
+            for (var p in obj)
+                if (obj.hasOwnProperty(p)) {
+                    str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+                }
+            return str.join("&");
+        };
+
         var _Loader = function(options){
             // to be populated by build scripts & outer constructors
             this.exchange_hostname = '%s';
@@ -189,21 +203,42 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             this.targetChildIndex = options.targetChildIndex;
             this.dynamicInsertion = (this.targetId && this.targetChildIndex);
 
+            // External, publisher specific ID's options to pass to exchange URL, which in turn
+            // get passed to adserver URLs
+            this.external = options.external;
+
             // Form ad exchange URL
-            var u = (this.secure ? 'https://' + this.exchange_secure_hostname : 'http://' + this.exchange_hostname);
-            u += this.pub_path;
-            u += '?' + 'pid=' + this.pid + '&type=javascript&form-factor=' + this.formFactor;
+            // First, get all query Params
+            var self = this;
+            var queryParams = {
+                'pid': self.pid,
+                'type': 'javascript',
+                'form-factor': self.formFactor
+            };
+            // if external properties are passed, add them to queryParams
+            if (this.external){
+                for (var e in this.external){
+                    if (this.external.hasOwnProperty(e)){
+                        queryParams[e] = this.external[e];
+                    }
+                }
+            }
             // add keywords to URL if available
             if (this.keywords) {
                 var keywords = this.parseKeywords(this.keywords);
                 // keywords being null means error has been thrown, so don't append to URL;
-                if (keywords) u += '&keywords=' + keywords;
+                if (keywords) queryParams['keywords'] = keywords;
             }
             // add debug parameter if true, which will tell exchange to send
             // back additional debugging data along with response.
             if (this.debug){
-                u += '&debug=true';
+                queryParams['debug'] = true;
             }
+
+            // finally, form URL
+            var u = (this.secure ? 'https://' + this.exchange_secure_hostname : 'http://' + this.exchange_hostname);
+            u += this.pub_path;
+            u += '?' + serializeObject(queryParams);
             this.url = encodeURI(u);
 
             // For fixed aspectRatio images. If not specified, will deduce dimensions from rendered h & w of image

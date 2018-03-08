@@ -411,6 +411,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                             // otherwise, just add an attribute to the element so that the post-render step
                             // can size it and inject the transform URL.
                             template = _addAttributeToTemplateVarElement(template, k, IMAGE_ATTR);
+                            template = _replaceTemplateVar(template,k,"");
                         }
                     } else {
                         template = _replaceTemplateVar(template, k, value);

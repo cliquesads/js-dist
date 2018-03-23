@@ -600,12 +600,12 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
-                if (xmlHttp.readyState == 4 && xmlHttp.status == 200){
+                if (xmlHttp.readyState === 4 && xmlHttp.status === 200){
                     self.display.markup = xmlHttp.responseText;
                     // call event hook
                     self._emitEvent('auctionCompleted', null, self.display.markup);
                     self.doDisplayRender(lazyCallback);
-                } else if (xmlHttp.readyState == 4 && xmlHttp.status != 200){
+                } else if (xmlHttp.readyState === 4 && xmlHttp.status !== 200){
                     self._emitEvent('auctionCompleted', 'Response ' + xmlHttp.status + ' received from exchange', null);
                 }
             };
@@ -741,14 +741,14 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 requests[i] = new XMLHttpRequest();
                 var getCallback = function(index){
                     return function(){
-                        if (requests[index].readyState == 4 && requests[index].status == 200){
+                        if (requests[index].readyState === 4 && requests[index].status === 200){
                             self.multiPaneNative.creativeSpecs[index] = JSON.parse(requests[index].responseText);
                             self.multiPaneNative.creativeSpecs[index].index = index;
                             // call event hook first
                             self._emitEvent('adMarkupLoaded', null, self.multiPaneNative.creativeSpecs[index]);
                             // now do the render
                             self.doMultiPaneNativeRender(index, lazyCallback);
-                        } else if (requests[index].readyState == 4 && requests[index].status != 200){
+                        } else if (requests[index].readyState === 4 && requests[index].status !== 200){
                             self._emitEvent('adMarkupLoaded', 'Response ' + requests[index].status + ' received from exchange', null);
                         }
                     }
@@ -771,7 +771,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             var self = this;
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.onreadystatechange = function(){
-                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                if (xmlHttp.readyState === 4 && xmlHttp.status === 200) {
                     var responseJson = JSON.parse(xmlHttp.responseText);
                     if (self.debug){
                         self.debugData = responseJson.debug;
@@ -800,7 +800,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     }
                     // call event hook
                     self._emitEvent('auctionCompleted', null, responseJson);
-                } else if (xmlHttp.readyState == 4 && xmlHttp.status != 200){
+                } else if (xmlHttp.readyState === 4 && xmlHttp.status !== 200){
                     self._emitEvent('auctionCompleted', 'Response ' + xmlHttp.status + ' received from exchange', null);
                 }
             };

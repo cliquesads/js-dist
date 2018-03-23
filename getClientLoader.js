@@ -858,6 +858,73 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
         return {
             init: function (options) {
                 return new _Loader(options);
+            },
+            /**
+             * Custom factory function for SmarterTravel that inits a CLoader with search ID external params,
+             * either via the SmarterAds SDK for third party sites, or via a call to the SmarterAds
+             * search service.
+             *
+             * @param options
+             * @param callback
+             * @returns {*|void}
+             */
+            smarterTravelFactory: function(options, callback){
+                // SmarterAds async flag to indicate whether to wrap in event listener
+                // or retrieve search ID's from SmarterAds API service
+                if (window.smarter.nativeActive){
+                    return this._sdkFactory(options, callback);
+                } else {
+                    return this._adServiceFactory(options, callback);
+                }
+            },
+            /**
+             * Creates new CLoader after event is emitted containing search IDs
+             * @param options CLoader options object
+             * @param callback function(err, cloader)
+             * @private
+             */
+            _sdkFactory: function(options, callback){
+                // rename to whatever variable in global scope storing SmarterAds SDK instance is
+                options.external = options.external || {};
+                window.addEventListener('smarterAdsIdsReady', function(e){
+                    for (var key in e.detail){
+                        if (e.detail.hasOwnProperty(key)){
+                            options.external[key] = e.detail[key];
+                        }
+                    }
+                    callback(null, new _Loader(options));
+                });
+            },
+
+            /**
+             * Calls SmarterAds service API to get search ID's before returning
+             * a new CLoader instance.
+             * @param options CLoader options object
+             * @param callback function(err, cloader)
+             * @private
+             */
+            _adServiceFactory: function(options, callback){
+                var ADSERVICE_URL = 'https://storage.googleapis.com/smartertravel-cliques-js/fake.json';
+                var xmlHttp = new XMLHttpRequest();
+                options.external = options.external || {};
+                xmlHttp.onreadystatechange = function(){
+                    if (xmlHttp.readyState === 4 && xmlHttp.status === 200){
+                        var responseJson = JSON.parse(xmlHttp.responseText);
+                        for (var key in responseJson){
+                            if (responseJson.hasOwnProperty(key)){
+                                options.external[key] = responseJson[key];
+                            }
+                        }
+                        callback(null, new _Loader(options));
+                    } else if (xmlHttp.readyState === 4 && xmlHttp.status !== 200){
+                        var msg = 'CLoader factory error: Response ' + xmlHttp.status + ' received from ad service.';
+                        var err = new Error(msg);
+                        console.warn(msg);
+                        callback(err, new _Loader(options));
+                    }
+                };
+                xmlHttp.open("GET", ADSERVICE_URL , true); // true for asynchronous
+                xmlHttp.send(null);
             }
         };
     };

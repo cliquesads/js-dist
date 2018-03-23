@@ -25,7 +25,13 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
 
         var _replaceTemplateVar = function(template, varName, value){
             var re = new RegExp('{{(\\s|)' + varName + '(\\s|)}}','g');
-            return template.replace(re, value);
+            // calling just template.replace will not properly replace full value if
+            // value includes any dollar signs, which are special characters for replace function.
+            // So have to wrap it in closure & pass it a predicate (I don't really know why)
+            var replaceString = function replaceString(replaceValue) {
+                return template.replace(re, function () { return replaceValue });
+            };
+            return replaceString(value);
         };
 
         var _addAttributeToTemplateVarElement = function(template, varName, attributeTitle){

@@ -469,7 +469,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                             template = _addAttributeToTemplateVarElement(template, k, IMAGE_ATTR);
                             template = _replaceTemplateVar(template,k,"");
                         }
-                    } else if (k === 'clickUrl') {
+                    } else if (k === 'click_url') {
                         // have to add attribute to click element so postRender can add click event listener
                         // to it.
                         template = _addAttributeToTemplateVarElement(template, k, CLICK_ATTR);
@@ -612,7 +612,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     // multiple root nodes, in which case selecting just the target index child will not necessarily
                     // return the target node.
                     var parent = self.findTargetElement(false).parentElement;
-                    var placeholder = _findChildrenWithAttribute(parent, self.getPanePlaceholderAttribute(index));
+                    var placeholder = _findChildrenWithAttribute(parent, self.getPanePlaceholderAttribute(index))[0];
                     placeholder.innerHTML = markup;
                     // call event hook
                     self._emitEvent('adRendered', null, markup);
@@ -944,7 +944,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
 
                 // SmarterAds async flag to indicate whether to wrap in event listener
                 // or retrieve search ID's from SmarterAds API service
-                if (window.smarter.nativeActive){
+                if (window.smarter && window.smarter.nativeActive){
                     return this._sdkFactory(options, callback);
                 } else {
                     return this._adServiceFactory(options, callback);
@@ -987,6 +987,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                     // click URL
                     options.external.imp_id = data.searchId;
                     options.external.scoring_location = data.destinationId;
+                    options.external.location2 = 'g' + data.destinationId;
 
                     // try to get scoring scheme from searchRedirectParams from first ad in array.
                     // All ads should have identical scoring schemes.
@@ -1062,7 +1063,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
              */
             _adServiceFactory: function(options, callback){
                 var adserviceParams = {
-                    key: '4ad299ca-6d16-403f-b02cf2b28dbc970c',
+                    key: '4ad299ca-6d16-403f-b02c-f2b28dbc970c',
                     placement: 'native ads',
                     scheme_id: '271a8989-c1af-4174-84f3-04ef4e4c7392',
                     test: true // TODO: set to false when in production
@@ -1070,7 +1071,7 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                 var adserviceBaseUrl = 'https://a.smartertravel.com/a/search/hotel';
 
                 if (options.locationId){
-                    adserviceParams.locationId = options.locationId;
+                    adserviceParams.destination = options.locationId;
                 } else {
                     console.warn('No LocationID provided to CLoader factory, must provide a ' +
                         'location ID for Ad Service call to succeed');
@@ -1087,12 +1088,13 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                         // now build options.external, which ultimately gets passed to click tracking constructor
                         options.external.imp_id = responseJson.success.searchId;
                         options.external.scoring_location = options.locationId;
+                        options.external.location2 = 'g' + options.locationId;
 
                         // try to get scoring scheme from searchRedirectParams from first ad in array.
                         // All ads should have identical scoring schemes.
                         if (success.ads &&
-                            success.ads.nativeAds &&
-                            success.ads.nativeAds.length > 0){
+                            success.ads["native ads"] &&
+                            success.ads["native ads"].length > 0){
                             options.external.scoring_scheme = success.ads["native ads"][0]
                                 .searchRedirectParams.scoring_scheme;
                         }

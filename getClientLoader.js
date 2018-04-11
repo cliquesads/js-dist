@@ -48,8 +48,8 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
                         var child = element.children[i];
                         if (child.hasAttribute(attribute)){
                             c.push(child);
-                            _inner(child, attribute);
                         }
+                        _inner(child, attribute);
                     }
                 }
             };

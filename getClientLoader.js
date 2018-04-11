@@ -57,14 +57,33 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath){
             return c;
         };
 
-        var _getTransformUrlFromCanonical = function(canonicalUrl, width, height){
+        var _getTransformUrlFromCanonical = function(canonicalUrl, width, height, cloudinary){
             // check if browser supports devicePixelRatio prop, if so, scale image w & h by that
             if (window.devicePixelRatio){
                 height = Math.round(window.devicePixelRatio * height);
                 width = Math.round(window.devicePixelRatio * width);
             }
-            var transform = 'c_thumb,g_auto,h_' + height + ',w_' + width;
+            var crop, gravity;
+            if (cloudinary){
+                crop = cloudinary.crop || 'c_thumb';
+                gravity = cloudinary.gravity || 'g_auto';
+            }
+            var transform = [crop, gravity, 'h_' + height, 'w_' + width].join(',');
             return canonicalUrl.replace(/(image\/upload\/)(.*$)/g,"$1" + transform + "/$2");
+        };
+
+        /**
+         * Forms click tracking URL from external parameters & _clickTracking private object
+         * @param context
+         * @private
+         */
+        var _getClickTrackingUrl = function(context){
+            var url = context._clickTracking.trackingUrlBase;
+            url += '?' + serializeObject(context.external);
+            if (context.externalId){
+                url = [url, [context._clickTracking.externalIdKey, context.externalId].join('=')].join('&');
+            }
+            return encodeURI(url);
         };
 
         /**

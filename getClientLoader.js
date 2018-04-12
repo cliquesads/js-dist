@@ -3,11 +3,9 @@ var main = require('./lib/main');
 var serialization = require('./lib/serialization');
 
 /**
- * Main function houses contents of CLoader closure and serializes whole function,
- * binding various config params in the process.
- *
- * Object itself resides under var f
- *
+ * Does the bulk of the work building the CLoader dist files for a given environment.
+ * Binds config variables to main loader + any factories and wraps in a self-invoking
+ * closure to write to file.
  *
  * @param exchangeHostname
  * @param exchangeSecureHostname
@@ -16,9 +14,17 @@ var serialization = require('./lib/serialization');
  * @returns {*}
  */
 module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath, factory){
+    // first, format main CLoader code w/ URL variables
     var fString = util.format(main.toString(),exchangeHostname, exchangeSecureHostname, pubPath);
-    factory = serialization.indent(factory, 12);
-    fString = fString.replace(/([\s\S]*)(\n\s\s\s\s\s\s\s\s};\n\s\s\s\s};\n})$/g, '$1,\n'+ factory + '$2');
+
+    // indent factory, if provided, to match indentation where it will be inserted into CLoader
+    if (factory){
+        factory = serialization.indent(factory, 12);
+        // This is terrible, but it works. Literally inserting factory functions as object keys/values
+        // after `init` function
+        fString = fString.replace(/([\s\S]*)(\n\s\s\s\s\s\s\s\s};\n\s\s\s\s};\n})$/g, '$1,\n'+ factory + '$2');
+    }
+
     fString = 'var CLoader = CLoader || (' + fString + '());';
     return fString;
 };

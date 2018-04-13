@@ -19,10 +19,10 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath, fac
 
     // indent factory, if provided, to match indentation where it will be inserted into CLoader
     if (factory){
-        factory = serialization.indent(factory, 12);
+        factory = serialization.indent(factory, 8);
         // This is terrible, but it works. Literally inserting factory functions as object keys/values
         // after `init` function
-        fString = fString.replace(/([\s\S]*)(\n\s\s\s\s\s\s\s\s};\n\s\s\s\s};\n})$/g, '$1,\n'+ factory + '$2');
+        fString = fString.replace(/([\s\S]*)(\n\s\s\s\s};\n})$/g, '$1,\n'+ factory + '$2');
     }
 
     fString = 'var CLoader = CLoader || (' + fString + '());';

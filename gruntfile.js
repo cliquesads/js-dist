@@ -71,11 +71,35 @@ module.exports = function(grunt) {
         grunt.config.set('exchangeSecureHostname', exchangeSecureHostname);
 		grunt.config.set('pubPath', pubPath);
 
+		// Now load client custom factory & params & set grunt configs
+        var custom;
+        try {
+            custom = config.get('Static.Custom');
+        } catch (e){
+            grunt.log.ok('No custom factories provided, skipping.');
+        }
+
+		if (custom){
+            grunt.config.set('custom', custom);
+        }
+
         grunt.log.ok(process.env.NODE_ENV + ' environment config loaded.')
 	});
 
     // Task to build cloader.js file
     grunt.task.registerTask('buildLoader', 'Passes config values to cliquesAdsAsync & builds ClientLoader.js', function(){
+
+        // first build any custom factories, if provided
+        var custom, factory;
+        try {
+            custom = grunt.config.get('custom');
+        } catch (e){}
+
+        if (custom){
+            var getFactory = require(custom.factoryFile);
+            factory = getFactory(custom.options);
+        }
+
         var getClientLoader = require('./getClientLoader');
         var fs = require('fs');
 
@@ -86,7 +110,7 @@ module.exports = function(grunt) {
         grunt.log.ok('Building cloader.js...');
 
         // load serialized function closure to write to file
-        var fString = getClientLoader(exchangeHostname, exchangeSecureHostname, pubPath);
+        var fString = getClientLoader(exchangeHostname, exchangeSecureHostname, pubPath, factory);
 
         // Add environment suffix in all env's except for prod
         var suffix = process.env.NODE_ENV === 'production' ? '' : '-' + process.env.NODE_ENV;

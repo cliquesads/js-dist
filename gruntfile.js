@@ -8,7 +8,10 @@ module.exports = function(grunt) {
 		uglify: {
 			production: {
 				options: {
-					mangle: false
+					mangle: false,
+                    output: {
+					    comments: 'some'
+                    }
 				},
 				files: {
 					'dist/cloader.min.js': 'dist/cloader.js'
@@ -16,7 +19,10 @@ module.exports = function(grunt) {
 			},
             dev: {
                 options: {
-                    mangle: false
+                    mangle: false,
+                    output: {
+                        comments: 'some'
+                    }
                 },
                 files: {
                     'dist/cloader-dev.min.js': 'dist/cloader-dev.js'
@@ -24,7 +30,10 @@ module.exports = function(grunt) {
             },
             "local-test": {
                 options: {
-                    mangle: false
+                    mangle: false,
+                    output: {
+                        comments: 'some'
+                    }
                 },
                 files: {
                     'dist/cloader-local-test.min.js': 'dist/cloader-local-test.js'

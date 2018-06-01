@@ -1,4 +1,5 @@
 var util = require('util');
+var pjson = require('./package.json');
 var main = require('./lib/main');
 var serialization = require('./lib/serialization');
 
@@ -15,7 +16,7 @@ var serialization = require('./lib/serialization');
  */
 module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath, factory){
     // first, format main CLoader code w/ URL variables
-    var fString = util.format(main.toString(),exchangeHostname, exchangeSecureHostname, pubPath);
+    let fString = util.format(main.toString(),exchangeHostname, exchangeSecureHostname, pubPath);
 
     // indent factory, if provided, to match indentation where it will be inserted into CLoader
     if (factory){
@@ -26,5 +27,9 @@ module.exports = function(exchangeHostname, exchangeSecureHostname, pubPath, fac
     }
 
     fString = 'var CLoader = CLoader || (' + fString + '());';
+
+    const version = pjson.version;
+    const now = new Date();
+    fString = `/*@preserve Cliques Ad Loader v${version}, built ${now} */ \n` + fString;
     return fString;
 };

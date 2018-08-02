@@ -1,6 +1,6 @@
 {
   "name": "js-dist",
-  "version": "0.9.32",
+  "version": "0.9.33",
   "description": "Build repo for cloader.js",
   "main": "getClientLoader.js",
   "dependencies": {
